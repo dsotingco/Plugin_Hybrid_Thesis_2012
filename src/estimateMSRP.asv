@@ -1,0 +1,14 @@
+%estimateMSRP.m
+%Estimates MSRP of a vehicle in dollars, based on total power in kW. 
+%Valid from 75 to 250 kW.
+
+function res = estimateMSRP(powerkW)
+elmin = 75;
+elmax = 250;
+cutoff = 150;
+if(powerkW<elmin || powerkW>elmax)
+    res = 0;
+elseif(powerkW>=elmin && powerkW<=cutoff)
+    res = 177.4*powerkW - 2104;
+end
+end

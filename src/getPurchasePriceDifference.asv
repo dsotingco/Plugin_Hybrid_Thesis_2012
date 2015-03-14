@@ -1,0 +1,28 @@
+%getPurchasePriceDifference.m
+function res = getPurchasePriceDifference(batteryCost,ultracapCost,motorCost,intCost)
+res = batteryCost + ultracapCost + motorCost + intCost;
+end
+
+%PE is power-to-energy ratio; MODEL is a string: choices are:
+%'argonneShortModel','argonneLongModel','argonneMidModel','nrelModel'
+function res = getBatteryCost(PE,model)
+    switch model
+        case 'argonneShortModel'
+            res = 32.*PE + 600;
+        case 'argonneLongModel'  
+            res = 20.*PE + 125;
+        case 'argonneMidModel'
+            res = (getBatteryCost(PE,'argonneShortModel') + getBatteryCost(PE,'argonneLongModel'))./2;
+        case 'nrelModel'
+            res = 11.1.*PE + 211.1;
+    end
+    %Short-term and long-term Argonne models are from: "Maximizing Net
+    %Present Value of a SERIES PHEV by Optimizing Battery Size and Vehicle
+    %Control Parameters", R. Vijaya
+end
+
+function res = getMotorCost(motorPower)
+res = 16.*motorPower + 385; 
+%long-term model from "Cost-Benefit Analysis of Plug-in Hybrid Electric
+%Vehicle Technology", A. Simpson (2006)
+end

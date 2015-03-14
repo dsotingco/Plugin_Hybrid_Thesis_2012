@@ -1,0 +1,56 @@
+%   GETMINMSRP - Returns the minimum MSRP of a PHEV.  This model is based
+%   on adding the costs of batteries, motors, and ultracapacitors to the
+%   MSRP of a conventional vehicle with the same power output from its
+%   drivetrain.  
+%   BAT is the battery energy, in kWh
+%   MOTOR is the motor peak power, in kW
+%   ENGINE is the engine peak power, in kW
+%   UCAPS is the number of ultracapacitors (based on Maxwell PC2500
+%       ultracapacitor - the data sheet is available online.  It is rated
+%       at 2700 F, 8400 J, continuous power output of 1.563 kW
+
+
+function res = getMinMSRP(bat,motor,engine,ucaps)
+PE = motor./bat;    %power-to-energy ratio
+totalPower = motor + engine;
+
+convMSRP = getMSRP(totalPower);
+batteryCost = getBatteryCost(PE,'argonneMidModel');
+motorCost = getMotorCost(motor);
+
+res = convMSRP + batteryCost + motorCost + ucapCost;
+end
+
+%PE is power-to-energy ratio; MODEL is a string: choices are:
+%'argonneShortModel','argonneLongModel','argonneMidModel','nrelModel'
+function res = getBatteryCost(PE,model)
+    switch model
+        case 'argonneShortModel'
+            res = 32.*PE + 600;
+        case 'argonneLongModel'  
+            res = 20.*PE + 125;
+        case 'argonneMidModel'
+            res = (getBatteryCost(PE,'argonneShortModel') + getBatteryCost(PE,'argonneLongModel'))./2;
+        case 'nrelModel'
+            res = 11.1.*PE + 211.1;
+    end
+    %Short-term and long-term Argonne models are from: "Maximizing Net
+    %Present Value of a SERIES PHEV by Optimizing Battery Size and Vehicle
+    %Control Parameters", R. Vijayagopal, J. Kwon, A. Rousseau, P. Maloney
+    %(2010)
+    %Mid-term Argonne model is calculated by averaging Argonne short-term
+    %and long-term models.
+    %NREL model is from "Cost-Benefit Analysis of Plug-in Hybrid Electric
+    %Vehicle Technology", A. Simpson (2006)
+end
+
+
+function res = getMotorCost(motorPower)
+res = 16.*motorPower + 385; 
+%long-term model from "Cost-Benefit Analysis of Plug-in Hybrid Electric
+%Vehicle Technology", A. Simpson (2006)
+end
+
+
+function res = getUcapCost
+end

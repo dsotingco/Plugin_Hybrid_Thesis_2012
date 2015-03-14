@@ -1,0 +1,46 @@
+%readVehiclePowerCost.m
+
+clear all;
+close all;
+
+[vpcnum,vpctext,vpcraw] = xlsread('vehiclePowerCostRelationship.xlsx');
+
+%format of vpcnum:
+%first column is engine power, in horsepower
+%second column is engine power, in kW
+%third column is MSRP, in dollars
+
+figure;
+plot(vpcnum(:,2),vpcnum(:,3),'k.');
+
+%extract the data less than 150 kW (about 200 hp)
+[m,n] = size(vpcnum);
+counter = 0;
+for index = 1:m
+    if(vpcnum(index,2)<=150)
+        counter = counter + 1;
+    end
+end
+
+vpcsmall = zeros(counter,3);
+vpcbig = zeros(m-counter,3);
+sindex = 1;
+bindex = 1;
+
+for index = 1:m
+    if(vpcnum(index,2)<=150)
+        vpcsmall(sindex,:) = vpcnum(index,:);
+        sindex = sindex + 1;
+    else
+        vpcbig(bindex,:) = vpcnum(index,:);
+        bindex = bindex + 1;
+    end
+end
+
+x1 = [74.6 150]
+
+figure;
+plot(vpcsmall(:,2),vpcsmall(:,3),'k.');
+
+figure;
+plot(vpcbig(:,2),vpcbig(:,3),'k.');

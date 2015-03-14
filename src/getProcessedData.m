@@ -1,0 +1,264 @@
+%GETPROCESSEDDATA - Returns data that is calculated with certain
+%assumptions using the raw data from Autonomie.
+%GETPROCESSEDDATA(ARCH,DESDATA,BAT,MOTOR,ENGINE,UCAPS)
+%   ARCH is an all-caps string specifying architecture.  Your choices are:
+%       'SERIES' - Series Fixed-Gear PHEV
+%       'PARALLEL' - Parallel Pre-transmission (automatic) PHEV
+%       'SPLIT' - Split Midsize PHEV
+%       'PARALLEL2ESS' - Parallel Pre-transmission (automatic) PHEV with
+%           dual energy storage (i.e. battery and ultracapacitor)
+%       'SPLITDUAL' - Split Midsize PHEV with dual energy storage (i.e.
+%           battery and ultracapacitor)
+%   DESDATA is an all-caps string specifying the data you want.  Choices:
+%       'CS_MPG_CITY' - miles per gallon, in charge-sustaining mode, in
+%           city driving, with the standard adjustment of 0.9 from Hellman and
+%           Murrell 1984
+%       'CS_MPG_HIGHWAY' - miles per gallon, in charge-sustaining mode, in
+%           highway driving, with the standard adjustment of 0.78 from Hellman and
+%           Murrell 1984
+%       'CS_MPG_COMBINED' - miles per gallon, in charge-sustaining mode,
+%           for combined city and highway driving, with an assumption of 43/57
+%           city/highway
+%       'CD_MPG_CITY' - miles per gallon, in charge-depleting mode, in
+%           city driving, with the standard adjustment of 0.9 from Hellman and
+%           Murrell 1984
+%       'CD_MPG_HIGHWAY' - miles per gallon, in charge-depleting mode, in
+%           highway driving, with the standard adjustment of 0.78 from Hellman and
+%           Murrell 1984
+%       'CD_MPG_COMBINED' - miles per gallon, in charge-depleting mode,
+%           for combined city and highway driving, with an assumption of 43/57
+%           city/highway
+%       'CD_ELEC_CITY' - electric consumption (kWh per 100 mi.), in charge-depleting mode, in
+%           city driving
+%       'CD_ELEC_HIGHWAY' - electric consumption (kWh per 100 mi.), in charge-depleting mode, in
+%           highway driving
+%       'CD_ELEC_COMBINED' - electric consumption (kWh per 100 mi.), in
+%           charge-depleting mode, for combined city and highway driving,
+%           with an assumption of 43/57 city/highway
+%       'CD_MPGE_CITY' - electric consumption (equivalent miles per gallon), in charge-depleting mode, in
+%           city driving; uses an assumption of 1 gallon of gasoline being
+%           equivalent to 33.7kWh of energy; provides the same data as
+%           'CD_ELEC_CITY' but in different units
+%       'CD_MPGE_HIGHWAY' - electric consumption (equivalent miles per gallon), in charge-depleting mode, in
+%           highway driving; uses an assumption of 1 gallon of gasoline being
+%           equivalent to 33.7kWh of energy; provides the same data as
+%           'CD_ELEC_HIGHWAY' but in different units
+%       'CD_MPGE_COMBINED' - electric consumption (equivalent miles per
+%           gallon), in charge-depleting mode, for combined city and
+%           highway driving with a 43/57 split; uses an assumption of 1 gallon of gasoline being
+%           equivalent to 33.7kWh of energy; provides the same data as
+%           'CD_ELEC_COMBINED' but in different units
+%       'CS_CO2_CITY' - CO2 emissions in g/mi. for city driving in
+%           charge-sustaining mode
+%       'CS_CO2_HIGHWAY' - CO2 emissions in g/mi. for highway driving in
+%           charge-sustaining mode
+%       'CS_CO2_COMBINED' - CO2 emissions in g/mi. for combined city and highway driving in
+%           charge-sustaining mode, using an assumption of 43/57
+%           city/highway
+%       'CD_CO2_CITY' - CO2 emissions in g/mi. for city driving in
+%           charge-depleting mode
+%       'CD_CO2_HIGHWAY' - CO2 emissions in g/mi. for highway driving in
+%           charge-depleting mode
+%       'CD_CO2_COMBINED' - CO2 emissions in g/mi. for combined city and highway driving in
+%           charge-depleting mode, using an assumption of 43/57
+%           city/highway
+%       'CO2_FUF' - CO2 emissions in g/mi. for combined city and highway
+%           driving, and also combined charge-depleting and
+%           charge-sustaining driving, based on the fleet utility factor
+%           (FUF) as derived in SAE Standard J2841.
+%       'CO2_MDIUF' - CO2 emissions in g/mi. for combined city and highway
+%           driving, and also combined charge-depleting and
+%           charge-sustaining driving, based on the multiple-day individual
+%           utility factor (MDIUF) as derived in SAE Standard J2841.
+%       'MPGE_FUF' - equivalent miles per gallon, combining gasoline and
+%           electric consumption for city and highway driving, and also
+%           charge-depleting and charge-sustaining modes, based on the
+%           fleet utility factor (FUF) as derived in SAE Standard J2841.
+%       'MPGE_MDIUF' - equivalent miles per gallon, combining gasoline and
+%           electric consumption for city and highway driving, and also
+%           charge-depleting and charge-sustaining modes, based on the
+%           multiple-day individual utility factor (MDIUF) as derived in
+%           SAE Standard J2841.
+%       'MPG_FUF' - miles per gallon, combining 
+%           charge-depleting and charge-sustaining modes, based on the
+%           fleet utility factor (FUF) as derived in SAE Standard J2841.
+%       'MPG_MDIUF' - miles per gallon, combining 
+%           charge-depleting and charge-sustaining modes, based on the
+%           multiple-day individual utility factor (MDIUF) as derived in
+%           SAE Standard J2841.
+%       'ELEC_FUF' - electric consumption (kWh per 100 mi.), combining 
+%           charge-depleting and charge-sustaining modes, based on the
+%           fleet utility factor (FUF) as derived in SAE Standard J2841.
+%       'ELEC_MDIUF' - electric consumption (kWh per 100 mi.), combining 
+%           charge-depleting and charge-sustaining modes, based on the
+%           multiple-day individual utility factor (MDIUF) as derived in
+%           SAE Standard J2841.
+%   BAT is the battery energy, in kWh
+%   MOTOR is the motor peak power, in kW
+%   ENGINE is the engine peak power, in kW
+%   UCAPS is the number of ultracapacitors (based on Maxwell PC2500
+%       ultracapacitor - the data sheet is available online.  It is rated
+%       at 2700 F, 8400 J, continuous power output of 1.563 kW
+
+function res = getProcessedData(arch,desData,bat,motor,engine,ucaps)
+caf = 0.9;  %city adjustment factor for FTP from Hellman and Murrell 1984
+haf = 0.78; %highway adjustment factor for HWFET from Hellman and Murrell 1984
+    switch desData
+        case 'CS_MPG_CITY'
+            res = caf.*getRawData(arch,'MPG_CS_FTP',bat,motor,engine,ucaps);
+        case 'CS_MPG_HIGHWAY'
+            HWFETdistance = 10.26; %mi.
+            US06distance = 8.01; %mi.
+            HWFETMPG = haf*getRawData(arch,'MPG_CS_HWFET',bat,motor,engine,ucaps);
+            US06MPG = getRawData(arch,'MPG_CS_US06',bat,motor,engine,ucaps);
+            res = (HWFETdistance + US06distance)./((HWFETdistance./HWFETMPG) + (US06distance./US06MPG));
+        case 'CS_MPG_COMBINED'
+            percentCity = 0.43;
+            percentHighway = 0.57;
+            cityMPG = getProcessedData(arch,'CS_MPG_CITY',bat,motor,engine,ucaps);
+            highwayMPG = getProcessedData(arch,'CS_MPG_HIGHWAY',bat,motor,engine,ucaps);
+            res = 1./(percentCity./cityMPG + percentHighway./highwayMPG);
+        case 'CD_MPG_CITY'
+            res = caf.*getRawData(arch,'MPG_CD_FTP',bat,motor,engine,ucaps);
+        case 'CD_MPG_HIGHWAY'
+            HWFETdistance = 10.26; %mi.
+            US06distance = 8.01; %mi.
+            HWFETMPG = haf.*getRawData(arch,'MPG_CD_HWFET',bat,motor,engine,ucaps);
+            US06MPG = getRawData(arch,'MPG_CD_US06',bat,motor,engine,ucaps);
+            res = (HWFETdistance + US06distance)./((HWFETdistance./HWFETMPG) + (US06distance./US06MPG));
+        case 'CD_MPG_COMBINED'
+            percentCity = 0.43;
+            percentHighway = 0.57;
+            cityMPG = getProcessedData(arch,'CD_MPG_CITY',bat,motor,engine,ucaps);
+            highwayMPG = getProcessedData(arch,'CD_MPG_HIGHWAY',bat,motor,engine,ucaps);
+            res = 1./(percentCity./cityMPG + percentHighway./highwayMPG);
+        case 'CD_ELEC_CITY'
+            res = (1/caf).*getRawData(arch,'ELEC_CD_FTP',bat,motor,engine,ucaps);
+        case 'CD_ELEC_HIGHWAY'
+            HWFETdistance = 10.26; %mi.
+            US06distance = 8.01; %mi
+            HWFETelec = (1/haf).*getRawData(arch,'ELEC_CD_HWFET',bat,motor,engine,ucaps);
+            US06elec = getRawData(arch,'ELEC_CD_US06',bat,motor,engine,ucaps);
+            res = ((HWFETdistance.*HWFETelec) + (US06distance.*US06elec))./(HWFETdistance + US06distance);
+        case 'CD_ELEC_COMBINED'
+            percentCity = 0.43;
+            percentHighway = 0.57;
+            cityElec = getProcessedData(arch,'CD_ELEC_CITY',bat,motor,engine,ucaps);
+            highwayElec = getProcessedData(arch,'CD_ELEC_HIGHWAY',bat,motor,engine,ucaps);
+%             res = 1./(percentCity./cityElec + percentHighway./highwayElec);
+            res = percentCity.*cityElec + percentHighway.*highwayElec;
+        case 'CD_MPGE_CITY'
+            %res = 3370./getProcessedData(arch,'CD_ELEC_CITY',bat,motor,engine,ucaps);
+%             res = caf.*getRawData(arch,'MPGE_CD_FTP',bat,motor,engine,ucaps);
+            elec = getProcessedData(arch,'CD_ELEC_CITY',bat,motor,engine,ucaps);
+            mpg = getProcessedData(arch,'CD_MPG_CITY',bat,motor,engine,ucaps);
+            res = getMPGe(elec,mpg);
+        case 'CD_MPGE_HIGHWAY'
+            %res = 3370./getProcessedData(arch,'CD_ELEC_HIGHWAY',bat,motor,engine,ucaps);
+%             HWFETdistance = 10.26; %mi.
+%             US06distance = 8.01; %mi
+%             HWFETmpge = haf.*getRawData(arch,'MPGE_CD_HWFET',bat,motor,engine,ucaps);
+%             US06mpge = getRawData(arch,'MPGE_CD_US06',bat,motor,engine,ucaps);
+%             res = (HWFETdistance + US06distance)./((HWFETdistance./HWFETmpge) + (US06distance./US06mpge));
+            elec = getProcessedData(arch,'CD_ELEC_HIGHWAY',bat,motor,engine,ucaps);
+            mpg = getProcessedData(arch,'CD_MPG_HIGHWAY',bat,motor,engine,ucaps);
+            res = getMPGe(elec,mpg);
+        case 'CD_MPGE_COMBINED'
+            %res = 3370./getProcessedData(arch,'CD_ELEC_COMBINED',bat,motor,engine,ucaps);
+            percentCity = 0.43;
+            percentHighway = 0.57;
+            cityMPGe = getProcessedData(arch,'CD_MPGE_CITY',bat,motor,engine,ucaps);
+            highwayMPGe = getProcessedData(arch,'CD_MPGE_HIGHWAY',bat,motor,engine,ucaps);
+            res = 1./(percentCity./cityMPGe + percentHighway./highwayMPGe);
+        case 'CS_CO2_CITY'
+%             res = getRawData(arch,'CO2_CS_FTP',bat,motor,engine,ucaps);
+            mpg = getProcessedData(arch,'CS_MPG_CITY',bat,motor,engine,ucaps);
+            res = getCO2estimate(mpg);
+        case 'CS_CO2_HIGHWAY'
+%             HWFETdistance = 10.26; %mi.
+%             US06distance = 8.01; %mi.
+%             HWFETco2 = getRawData(arch,'CO2_CS_HWFET',bat,motor,engine,ucaps);
+%             US06co2 = getRawData(arch,'CO2_CS_US06',bat,motor,engine,ucaps);
+%             res = ((HWFETdistance.*HWFETco2) + (US06distance.*US06co2))./(HWFETdistance + US06distance);
+            mpg = getProcessedData(arch,'CS_MPG_HIGHWAY',bat,motor,engine,ucaps);
+            res = getCO2estimate(mpg);
+        case 'CS_CO2_COMBINED'
+            percentCity = 0.43;
+            percentHighway = 0.57;
+            cityco2 = getProcessedData(arch,'CS_CO2_CITY',bat,motor,engine,ucaps);
+            highwayco2 = getProcessedData(arch,'CS_CO2_HIGHWAY',bat,motor,engine,ucaps);
+%             res = 1./(percentCity./cityco2 + percentHighway./highwayco2);
+            res = percentCity.*cityco2 + percentHighway.*highwayco2;
+        case 'CD_CO2_CITY'
+%             res = getRawData(arch,'CO2_CD_FTP',bat,motor,engine,ucaps);
+            mpg = getProcessedData(arch,'CD_MPG_CITY',bat,motor,engine,ucaps);
+            res = getCO2estimate(mpg);
+        case 'CD_CO2_HIGHWAY'
+%             HWFETdistance = 10.26; %mi.
+%             US06distance = 8.01; %mi.
+%             HWFETco2 = getRawData(arch,'CO2_CD_HWFET',bat,motor,engine,ucaps);
+%             US06co2 = getRawData(arch,'CO2_CD_US06',bat,motor,engine,ucaps);
+%             res = ((HWFETdistance.*HWFETco2) + (US06distance.*US06co2))./(HWFETdistance + US06distance);
+            mpg = getProcessedData(arch,'CD_MPG_HIGHWAY',bat,motor,engine,ucaps);
+            res = getCO2estimate(mpg);
+        case 'CD_CO2_COMBINED'
+            percentCity = 0.43;
+            percentHighway = 0.57;
+            cityco2 = getProcessedData(arch,'CD_CO2_CITY',bat,motor,engine,ucaps);
+            highwayco2 = getProcessedData(arch,'CD_CO2_HIGHWAY',bat,motor,engine,ucaps);
+%             res = 1./(percentCity./cityco2 + percentHighway./highwayco2);
+            res = percentCity.*cityco2 + percentHighway.*highwayco2;
+        case 'CO2_FUF'
+            cdrange = getRawData(arch,'CDRANGE',bat,motor,engine,ucaps);
+            uf = getUtilityFactor(cdrange,'FUF');
+            co2_cd = getProcessedData(arch,'CD_CO2_COMBINED',bat,motor,engine,ucaps);
+            co2_cs = getProcessedData(arch,'CS_CO2_COMBINED',bat,motor,engine,ucaps);
+%             res = 1 ./ ( (uf./co2_cd) + (1-uf)./co2_cs );
+            res = uf.*co2_cd + (1 - uf).*co2_cs;
+        case 'CO2_MDIUF'
+            cdrange = getRawData(arch,'CDRANGE',bat,motor,engine,ucaps);
+            uf = getUtilityFactor(cdrange,'MDIUF');
+            co2_cd = getProcessedData(arch,'CD_CO2_COMBINED',bat,motor,engine,ucaps);
+            co2_cs = getProcessedData(arch,'CS_CO2_COMBINED',bat,motor,engine,ucaps);
+%             res = 1 ./ ( (uf./co2_cd) + (1-uf)./co2_cs );
+            res = uf.*co2_cd + (1 - uf).*co2_cs;
+        case 'MPGE_FUF'
+            cdrange = getRawData(arch,'CDRANGE',bat,motor,engine,ucaps);
+            uf = getUtilityFactor(cdrange,'FUF');
+            mpge_cd = getProcessedData(arch,'CD_MPGE_COMBINED',bat,motor,engine,ucaps);
+            mpge_cs = getProcessedData(arch,'CS_MPG_COMBINED',bat,motor,engine,ucaps);
+            res = 1 ./ ( (uf./mpge_cd) + (1-uf)./mpge_cs );
+        case 'MPGE_MDIUF'
+            cdrange = getRawData(arch,'CDRANGE',bat,motor,engine,ucaps);
+            uf = getUtilityFactor(cdrange,'MDIUF');
+            mpge_cd = getProcessedData(arch,'CD_MPGE_COMBINED',bat,motor,engine,ucaps);
+            mpge_cs = getProcessedData(arch,'CS_MPG_COMBINED',bat,motor,engine,ucaps);
+            res = 1 ./ ( (uf./mpge_cd) + (1-uf)./mpge_cs );
+        case 'MPG_FUF'
+            cdrange = getRawData(arch,'CDRANGE',bat,motor,engine,ucaps);
+            uf = getUtilityFactor(cdrange,'FUF');
+            mpg_cd = getProcessedData(arch,'CD_MPG_COMBINED',bat,motor,engine,ucaps);
+            mpg_cs = getProcessedData(arch,'CS_MPG_COMBINED',bat,motor,engine,ucaps);
+            res = 1./( (uf./mpg_cd) + (1-uf)./mpg_cs );
+        case 'MPG_MDIUF'
+            cdrange = getRawData(arch,'CDRANGE',bat,motor,engine,ucaps);
+            uf = getUtilityFactor(cdrange,'MDIUF');
+            mpg_cd = getProcessedData(arch,'CD_MPG_COMBINED',bat,motor,engine,ucaps);
+            mpg_cs = getProcessedData(arch,'CS_MPG_COMBINED',bat,motor,engine,ucaps);
+            res = 1./( (uf./mpg_cd) + (1-uf)./mpg_cs );
+        case 'ELEC_FUF'
+            res = getProcessedData(arch,'CD_ELEC_COMBINED',bat,motor,engine,ucaps);
+%             cdrange = getRawData(arch,'CDRANGE',bat,motor,engine,ucaps);
+%             uf = getUtilityFactor(cdrange,'FUF');
+%             elec_cd = getProcessedData(arch,'CD_ELEC_COMBINED',bat,motor,engine,ucaps);
+%             elec_cs = getProcessedData(arch,'CS_ELEC_COMBINED',bat,motor,engine,ucaps);
+%             res = 1./( (uf./elec_cd) + (1-uf)./elec_cs );
+        case 'ELEC_MDIUF'
+            res = getProcessedData(arch,'CD_ELEC_COMBINED',bat,motor,engine,ucaps);
+%             cdrange = getRawData(arch,'CDRANGE',bat,motor,engine,ucaps);
+%             uf = getUtilityFactor(cdrange,'MDIUF');
+%             elec_cd = getProcessedData(arch,'CD_ELEC_COMBINED',bat,motor,engine,ucaps);
+%             elec_cs = getProcessedData(arch,'CS_ELEC_COMBINED',bat,motor,engine,ucaps);
+%             res = 1./( (uf./elec_cd) + (1-uf)./elec_cs );
+    end
+end
